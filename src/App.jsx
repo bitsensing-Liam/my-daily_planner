@@ -232,34 +232,42 @@ const App = () => {
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-[#17535B]/10 max-h-[85vh] overflow-y-auto custom-scrollbar">
             <div className="flex justify-between items-center mb-4 border-b pb-2">
               <h3 className="flex items-center gap-2 font-bold"><Clock size={18} className="text-[#E27D60]" /> Time Box</h3>
-              <button
-                onClick={() => { setIsMergeMode(!isMergeMode); setSelectedSlots(new Set()); }}
-                className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isMergeMode ? 'bg-[#E27D60] text-white' : 'bg-[#FAF9F6] text-[#17535B] hover:bg-[#E27D60]/10'}`}
-              >
-                {isMergeMode ? '취소' : '편집'}
-              </button>
-            </div>
-            {isMergeMode && selectedSlots.size >= 2 && (() => {
-              const sorted = [...selectedSlots].sort((a, b) => allTimes.indexOf(a) - allTimes.indexOf(b));
-              const isConsecutive = sorted.every((t, i) => i === 0 || allTimes.indexOf(t) === allTimes.indexOf(sorted[i - 1]) + 1);
-              return isConsecutive ? (
+              <div className="flex items-center gap-1">
+                {selectedSlots.size >= 2 && (() => {
+                  const sorted = [...selectedSlots].sort((a, b) => allTimes.indexOf(a) - allTimes.indexOf(b));
+                  const isConsecutive = sorted.every((t, i) => i === 0 || allTimes.indexOf(t) === allTimes.indexOf(sorted[i - 1]) + 1);
+                  return isConsecutive ? (
+                    <button
+                      onClick={() => {
+                        const start = sorted[0];
+                        const end = sorted[sorted.length - 1];
+                        setMergedSlots({ ...mergedSlots, [start]: end });
+                        setSelectedSlots(new Set());
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-[#17535B] text-white hover:bg-[#17535B]/80 transition-all"
+                    >
+                      <Merge size={12} /> 합치기({sorted.length})
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-red-400">연속 슬롯만 가능</span>
+                  );
+                })()}
+                {selectedSlots.size > 0 && (
+                  <button
+                    onClick={() => setSelectedSlots(new Set())}
+                    className="text-[10px] font-bold px-2 py-1 rounded-lg bg-[#FAF9F6] text-[#17535B] hover:bg-[#E27D60]/10 transition-all"
+                  >
+                    선택해제
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    const sorted = [...selectedSlots].sort((a, b) => allTimes.indexOf(a) - allTimes.indexOf(b));
-                    const start = sorted[0];
-                    const end = sorted[sorted.length - 1];
-                    setMergedSlots({ ...mergedSlots, [start]: end });
-                    setSelectedSlots(new Set());
-                    setIsMergeMode(false);
-                  }}
-                  className="w-full mb-3 flex items-center justify-center gap-1 text-xs font-bold py-2 bg-[#17535B] text-white rounded-lg hover:bg-[#17535B]/80 transition-all"
+                  onClick={() => { setIsMergeMode(!isMergeMode); setSelectedSlots(new Set()); }}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isMergeMode ? 'bg-[#E27D60] text-white' : 'bg-[#FAF9F6] text-[#17535B] hover:bg-[#E27D60]/10'}`}
                 >
-                  <Merge size={14} /> 선택한 {selectedSlots.size}개 슬롯 합치기
+                  {isMergeMode ? '취소' : '편집'}
                 </button>
-              ) : (
-                <p className="text-[10px] text-red-400 mb-2 text-center">연속된 슬롯만 합칠 수 있습니다</p>
-              );
-            })()}
+              </div>
+            </div>
             <div className="space-y-1">
               {(() => {
                 // 숨겨야 할 슬롯 계산 (합쳐진 블록의 중간 슬롯들)
@@ -284,24 +292,35 @@ const App = () => {
 
                   const isSelected = selectedSlots.has(time);
 
+                  const handleSlotClick = (e) => {
+                    if (isMergedStart) return;
+                    if (e.shiftKey) {
+                      e.preventDefault();
+                      const next = new Set(selectedSlots);
+                      if (next.has(time)) next.delete(time); else next.add(time);
+                      setSelectedSlots(next);
+                    } else if (isMergeMode) {
+                      const next = new Set(selectedSlots);
+                      if (next.has(time)) next.delete(time); else next.add(time);
+                      setSelectedSlots(next);
+                    }
+                  };
+
                   return (
                     <div
                       key={time}
-                      className={`flex gap-2 py-1 items-center border-l-2 pl-2 transition-all rounded-r-lg ${
+                      onClick={handleSlotClick}
+                      className={`flex gap-2 py-1 items-center border-l-2 pl-2 transition-all rounded-r-lg select-none ${
                         isMergedStart ? 'border-[#E27D60] bg-[#E27D60]/5' : 'border-transparent hover:border-[#E27D60]'
-                      } ${isSelected ? 'bg-[#17535B]/10 border-[#17535B]' : ''}`}
+                      } ${isSelected ? 'bg-[#17535B]/10 border-[#17535B]' : ''} ${!isMergedStart ? 'cursor-pointer' : ''}`}
                       style={isMergedStart ? { minHeight: `${slotCount * 28}px` } : {}}
                     >
                       {isMergeMode && !isMergedStart && (
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => {
-                            const next = new Set(selectedSlots);
-                            if (next.has(time)) next.delete(time); else next.add(time);
-                            setSelectedSlots(next);
-                          }}
-                          className="w-3 h-3 accent-[#17535B] cursor-pointer"
+                          readOnly
+                          className="w-3 h-3 accent-[#17535B] cursor-pointer pointer-events-none"
                         />
                       )}
                       <span className="text-[10px] font-mono opacity-40 w-14 shrink-0">
@@ -313,6 +332,7 @@ const App = () => {
                         placeholder="ㅡ"
                         value={schedule[time] || ''}
                         onChange={(e) => setSchedule({ ...schedule, [time]: e.target.value })}
+                        onClick={(e) => e.stopPropagation()}
                       />
                       {isMergedStart && (
                         <button
