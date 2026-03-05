@@ -162,7 +162,6 @@ const App = () => {
           <input type="file" ref={fileInputRef} onChange={importFromJson} className="hidden" accept=".json" />
           <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-2 bg-white border border-[#17535B]/20 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all"><Upload size={14} /> 불러오기</button>
           <button onClick={exportToJson} className="flex items-center gap-2 bg-white border border-[#17535B]/20 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all"><Download size={14} /> 내보내기</button>
-          <button onClick={saveToCloud} className="flex items-center gap-2 bg-[#17535B] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md hover:opacity-90 transition-all ml-2"><Save size={14} /> 클라우드 저장</button>
         </div>
       </header>
 
@@ -203,8 +202,8 @@ const App = () => {
                   <tr key={task.id} className="group hover:bg-[#FAF9F6]/50">
                     <td className="py-3 pr-4"><input type="text" className="w-full bg-transparent border-none p-0 focus:ring-0 text-[#17535B]" value={task.text} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, text: e.target.value} : t))} placeholder="할 일을 입력하세요..." /></td>
                     <td className="py-2">
-                      <select className="bg-[#FAF9F6] text-[10px] font-bold p-1 rounded border-none w-full" value={task.status} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, status: e.target.value} : t))}>
-                        <option>대기</option><option>진행중</option><option>완료</option><option>미루기</option>
+                      <select className={`text-[10px] font-bold p-1 rounded border-none w-full text-white ${task.status === '완료' ? 'bg-green-500' : task.status === '진행중' ? 'bg-blue-500' : task.status === '미루기' ? 'bg-red-500' : 'bg-[#FAF9F6] !text-[#17535B]'}`} value={task.status} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, status: e.target.value} : t))}>
+                        <option className="bg-white text-[#17535B]">대기</option><option className="bg-white text-[#17535B]">진행중</option><option className="bg-white text-[#17535B]">완료</option><option className="bg-white text-[#17535B]">미루기</option>
                       </select>
                     </td>
                     <td className="py-2 text-right"><button onClick={() => setTasks(tasks.filter(t => t.id !== task.id))} className="text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button></td>
