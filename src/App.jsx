@@ -4,7 +4,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import {
   CheckCircle2, Clock, MessageSquare, Plus, Trash2, Calendar,
-  Target, Save, Loader2, Database, Download, Upload, Merge, SplitSquareHorizontal, Link, X
+  Target, Save, Loader2, Database, Download, Upload, Merge, SplitSquareHorizontal, Link, X, ChevronUp, ChevronDown, GripVertical
 } from 'lucide-react';
 
 /**
@@ -209,6 +209,7 @@ const App = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left opacity-40 text-[10px] uppercase tracking-widest border-b border-[#17535B]/10">
+                  <th className="pb-2 w-8"></th>
                   <th className="pb-2">내용</th>
                   <th className="pb-2 w-28">배정 시간</th>
                   <th className="pb-2 w-24">상태</th>
@@ -216,8 +217,20 @@ const App = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#17535B]/5">
-                {tasks.map((task) => (
+                {tasks.map((task, idx) => (
                   <tr key={task.id} className="group hover:bg-[#FAF9F6]/50">
+                    <td className="py-2">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          onClick={() => { if (idx === 0) return; const next = [...tasks]; [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]; setTasks(next); }}
+                          className={`transition-opacity ${idx === 0 ? 'opacity-10 cursor-default' : 'opacity-30 hover:opacity-100 cursor-pointer'}`}
+                        ><ChevronUp size={12} /></button>
+                        <button
+                          onClick={() => { if (idx === tasks.length - 1) return; const next = [...tasks]; [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]; setTasks(next); }}
+                          className={`transition-opacity ${idx === tasks.length - 1 ? 'opacity-10 cursor-default' : 'opacity-30 hover:opacity-100 cursor-pointer'}`}
+                        ><ChevronDown size={12} /></button>
+                      </div>
+                    </td>
                     <td className="py-3 pr-4"><input type="text" className="w-full bg-transparent border-none p-0 focus:ring-0 text-[#17535B]" value={task.text} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, text: e.target.value} : t))} placeholder="할 일을 입력하세요..." /></td>
                     <td className="py-2">
                       {(() => {
