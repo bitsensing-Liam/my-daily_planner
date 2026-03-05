@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
-import { 
-  CheckCircle2, Clock, MessageSquare, Plus, Trash2, Calendar, 
-  Target, Save, Loader2, Database, Download, Upload 
+import {
+  CheckCircle2, Clock, MessageSquare, Plus, Trash2, Calendar,
+  Target, Save, Loader2, Database, Download, Upload, Merge, SplitSquareHorizontal
 } from 'lucide-react';
 
 /**
@@ -42,10 +42,20 @@ const App = () => {
   // 플래너 데이터 상태
   const [tasks, setTasks] = useState([]);
   const [schedule, setSchedule] = useState({});
-  const [feedback, setFeedback] = useState({ 
-    identity: '', 
-    reflection: '', 
-    improvement: '' 
+  const [feedback, setFeedback] = useState({
+    identity: '',
+    reflection: '',
+    improvement: ''
+  });
+  const [mergedSlots, setMergedSlots] = useState({});  // { "14:00": "16:30" } = 14:00~16:30 합쳐진 블록
+  const [selectedSlots, setSelectedSlots] = useState(new Set());
+  const [isMergeMode, setIsMergeMode] = useState(false);
+
+  // 전체 타임슬롯 배열 생성
+  const allTimes = Array.from({ length: 37 }, (_, i) => {
+    const h = Math.floor(i / 2) + 5;
+    const m = i % 2 === 0 ? '00' : '30';
+    return `${h.toString().padStart(2, '0')}:${m}`;
   });
 
   const getLocalTodayString = () => {
@@ -82,6 +92,7 @@ const App = () => {
         const data = docSnap.data();
         setTasks(data.tasks ? JSON.parse(data.tasks) : []);
         setSchedule(data.schedule ? JSON.parse(data.schedule) : {});
+        setMergedSlots(data.mergedSlots ? JSON.parse(data.mergedSlots) : {});
         setFeedback(data.feedback ? JSON.parse(data.feedback) : { identity: '', reflection: '', improvement: '' });
       }
       setIsLoaded(true);
@@ -95,7 +106,7 @@ const App = () => {
 
   // 3. JSON 내보내기 (구글 드라이브 보관용)
   const exportToJson = () => {
-    const dataStr = JSON.stringify({ date: getLocalTodayString(), tasks, schedule, feedback }, null, 2);
+    const dataStr = JSON.stringify({ date: getLocalTodayString(), tasks, schedule, mergedSlots, feedback }, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -116,6 +127,7 @@ const App = () => {
         const json = JSON.parse(e.target.result);
         if (json.tasks) setTasks(json.tasks);
         if (json.schedule) setSchedule(json.schedule);
+        if (json.mergedSlots) setMergedSlots(json.mergedSlots);
         if (json.feedback) setFeedback(json.feedback);
         setSaveMsg('데이터 불러오기 완료! ✅');
         setTimeout(() => setSaveMsg(''), 3000);
@@ -137,6 +149,7 @@ const App = () => {
       await setDoc(docRef, {
         tasks: JSON.stringify(tasks),
         schedule: JSON.stringify(schedule),
+        mergedSlots: JSON.stringify(mergedSlots),
         feedback: JSON.stringify(feedback),
         updatedAt: new Date().toISOString()
       }, { merge: true });
@@ -217,19 +230,107 @@ const App = () => {
         {/* Right: TimeBox */}
         <div className="lg:col-span-3">
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-[#17535B]/10 max-h-[85vh] overflow-y-auto custom-scrollbar">
-            <h3 className="flex items-center gap-2 font-bold mb-4 border-b pb-2"><Clock size={18} className="text-[#E27D60]" /> Time Box</h3>
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="flex items-center gap-2 font-bold"><Clock size={18} className="text-[#E27D60]" /> Time Box</h3>
+              <button
+                onClick={() => { setIsMergeMode(!isMergeMode); setSelectedSlots(new Set()); }}
+                className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isMergeMode ? 'bg-[#E27D60] text-white' : 'bg-[#FAF9F6] text-[#17535B] hover:bg-[#E27D60]/10'}`}
+              >
+                {isMergeMode ? '취소' : '편집'}
+              </button>
+            </div>
+            {isMergeMode && selectedSlots.size >= 2 && (() => {
+              const sorted = [...selectedSlots].sort((a, b) => allTimes.indexOf(a) - allTimes.indexOf(b));
+              const isConsecutive = sorted.every((t, i) => i === 0 || allTimes.indexOf(t) === allTimes.indexOf(sorted[i - 1]) + 1);
+              return isConsecutive ? (
+                <button
+                  onClick={() => {
+                    const sorted = [...selectedSlots].sort((a, b) => allTimes.indexOf(a) - allTimes.indexOf(b));
+                    const start = sorted[0];
+                    const end = sorted[sorted.length - 1];
+                    setMergedSlots({ ...mergedSlots, [start]: end });
+                    setSelectedSlots(new Set());
+                    setIsMergeMode(false);
+                  }}
+                  className="w-full mb-3 flex items-center justify-center gap-1 text-xs font-bold py-2 bg-[#17535B] text-white rounded-lg hover:bg-[#17535B]/80 transition-all"
+                >
+                  <Merge size={14} /> 선택한 {selectedSlots.size}개 슬롯 합치기
+                </button>
+              ) : (
+                <p className="text-[10px] text-red-400 mb-2 text-center">연속된 슬롯만 합칠 수 있습니다</p>
+              );
+            })()}
             <div className="space-y-1">
-              {Array.from({ length: 37 }, (_, i) => {
-                const h = Math.floor(i / 2) + 5;
-                const m = i % 2 === 0 ? '00' : '30';
-                const time = `${h.toString().padStart(2, '0')}:${m}`;
-                return (
-                  <div key={time} className="flex gap-2 py-1 items-center border-l-2 border-transparent hover:border-[#E27D60] pl-2 transition-all">
-                    <span className="text-[10px] font-mono opacity-40 w-8">{time}</span>
-                    <input type="text" className="flex-1 text-xs bg-transparent border-none p-0 focus:ring-0" placeholder="ㅡ" value={schedule[time] || ''} onChange={(e) => setSchedule({...schedule, [time]: e.target.value})} />
-                  </div>
-                );
-              })}
+              {(() => {
+                // 숨겨야 할 슬롯 계산 (합쳐진 블록의 중간 슬롯들)
+                const hiddenSlots = new Set();
+                Object.entries(mergedSlots).forEach(([start, end]) => {
+                  const startIdx = allTimes.indexOf(start);
+                  const endIdx = allTimes.indexOf(end);
+                  for (let i = startIdx + 1; i <= endIdx; i++) {
+                    hiddenSlots.add(allTimes[i]);
+                  }
+                });
+
+                return allTimes.map((time) => {
+                  if (hiddenSlots.has(time)) return null;
+
+                  const isMergedStart = mergedSlots[time];
+                  const endTime = isMergedStart;
+                  const endIdx = endTime ? allTimes.indexOf(endTime) : -1;
+                  const nextSlotTime = endIdx >= 0 && endIdx + 1 < allTimes.length ? allTimes[endIdx + 1] : null;
+                  const displayEnd = nextSlotTime || (endIdx >= 0 ? `${parseInt(endTime.split(':')[0]) + (endTime.split(':')[1] === '30' ? 1 : 0)}:${endTime.split(':')[1] === '30' ? '00' : '30'}` : null);
+                  const slotCount = endIdx >= 0 ? endIdx - allTimes.indexOf(time) + 1 : 1;
+
+                  const isSelected = selectedSlots.has(time);
+
+                  return (
+                    <div
+                      key={time}
+                      className={`flex gap-2 py-1 items-center border-l-2 pl-2 transition-all rounded-r-lg ${
+                        isMergedStart ? 'border-[#E27D60] bg-[#E27D60]/5' : 'border-transparent hover:border-[#E27D60]'
+                      } ${isSelected ? 'bg-[#17535B]/10 border-[#17535B]' : ''}`}
+                      style={isMergedStart ? { minHeight: `${slotCount * 28}px` } : {}}
+                    >
+                      {isMergeMode && !isMergedStart && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const next = new Set(selectedSlots);
+                            if (next.has(time)) next.delete(time); else next.add(time);
+                            setSelectedSlots(next);
+                          }}
+                          className="w-3 h-3 accent-[#17535B] cursor-pointer"
+                        />
+                      )}
+                      <span className="text-[10px] font-mono opacity-40 w-14 shrink-0">
+                        {isMergedStart ? `${time}~${displayEnd}` : time}
+                      </span>
+                      <input
+                        type="text"
+                        className="flex-1 text-xs bg-transparent border-none p-0 focus:ring-0"
+                        placeholder="ㅡ"
+                        value={schedule[time] || ''}
+                        onChange={(e) => setSchedule({ ...schedule, [time]: e.target.value })}
+                      />
+                      {isMergedStart && (
+                        <button
+                          onClick={() => {
+                            const next = { ...mergedSlots };
+                            delete next[time];
+                            setMergedSlots(next);
+                          }}
+                          className="text-[#E27D60] hover:text-red-500 transition-colors shrink-0"
+                          title="분리하기"
+                        >
+                          <SplitSquareHorizontal size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </section>
         </div>
