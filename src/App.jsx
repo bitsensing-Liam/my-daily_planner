@@ -4,7 +4,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import {
   CheckCircle2, Clock, MessageSquare, Plus, Trash2, Calendar,
-  Target, Save, Loader2, Database, Download, Upload, Merge, SplitSquareHorizontal, Link, X, ChevronUp, ChevronDown, GripVertical
+  Target, Save, Loader2, Database, Download, Upload, Merge, SplitSquareHorizontal, Link, X, ChevronUp, ChevronDown, GripVertical, FileText
 } from 'lucide-react';
 
 /**
@@ -51,6 +51,7 @@ const App = () => {
   const [scheduleLinks, setScheduleLinks] = useState({});  // { "14:00": taskId } = 시간-할일 연결
   const [selectedSlots, setSelectedSlots] = useState(new Set());
   const [isMergeMode, setIsMergeMode] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
 
   // 전체 타임슬롯 배열 생성
   const allTimes = Array.from({ length: 37 }, (_, i) => {
@@ -204,7 +205,7 @@ const App = () => {
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-[#17535B]/10 h-full min-h-[600px]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="flex items-center gap-2 font-bold text-xl"><CheckCircle2 size={22} className="text-[#E27D60]" /> 할 일 관리</h3>
-              <button onClick={() => setTasks([...tasks, { id: Date.now(), text: '', status: '대기', reschedule: '' }])} className="p-2 bg-[#17535B] text-white rounded-full hover:shadow-lg transition-all"><Plus size={18} /></button>
+              <button onClick={() => setTasks([...tasks, { id: Date.now(), text: '', status: '대기', reschedule: '', memo: '' }])} className="p-2 bg-[#17535B] text-white rounded-full hover:shadow-lg transition-all"><Plus size={18} /></button>
             </div>
             <table className="w-full text-sm">
               <thead>
@@ -231,7 +232,18 @@ const App = () => {
                         ><ChevronDown size={12} /></button>
                       </div>
                     </td>
-                    <td className="py-3 pr-4"><input type="text" className="w-full bg-transparent border-none p-0 focus:ring-0 text-[#17535B]" value={task.text} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, text: e.target.value} : t))} placeholder="할 일을 입력하세요..." /></td>
+                    <td className="py-3 pr-4">
+                      <div className="flex items-center gap-1">
+                        <input type="text" className="flex-1 bg-transparent border-none p-0 focus:ring-0 text-[#17535B]" value={task.text} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, text: e.target.value} : t))} placeholder="할 일을 입력하세요..." />
+                        <button
+                          onClick={() => setSelectedTaskId(selectedTaskId === task.id ? null : task.id)}
+                          className={`shrink-0 transition-colors ${selectedTaskId === task.id ? 'text-[#E27D60]' : task.memo ? 'text-[#17535B]/40 hover:text-[#E27D60]' : 'text-[#17535B]/15 hover:text-[#17535B]/40'}`}
+                          title="상세 보기"
+                        >
+                          <FileText size={14} />
+                        </button>
+                      </div>
+                    </td>
                     <td className="py-2">
                       {(() => {
                         const linkedTimes = Object.entries(scheduleLinks)
@@ -445,7 +457,65 @@ const App = () => {
           </section>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{ __html: `.custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #17535B20; border-radius: 10px; }` }} />
+      {/* Task Detail Side Panel */}
+      {selectedTaskId && (() => {
+        const task = tasks.find(t => t.id === selectedTaskId);
+        if (!task) return null;
+        return (
+          <>
+            <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSelectedTaskId(null)} />
+            <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col animate-slide-in">
+              <div className="flex items-center justify-between p-6 border-b border-[#17535B]/10">
+                <h3 className="font-bold text-lg text-[#17535B] truncate pr-4">{task.text || '(제목 없음)'}</h3>
+                <button onClick={() => setSelectedTaskId(null)} className="text-[#17535B]/40 hover:text-[#17535B] transition-colors shrink-0"><X size={20} /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#17535B]/40 mb-2 block">상태</label>
+                  <select
+                    className={`text-xs font-bold p-2 rounded-lg border-none w-full text-white ${task.status === '완료' ? 'bg-green-500' : task.status === '진행중' ? 'bg-blue-500' : task.status === '미루기' ? 'bg-red-500' : 'bg-[#17535B]/20 !text-[#17535B]'}`}
+                    value={task.status}
+                    onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, status: e.target.value} : t))}
+                  >
+                    <option className="bg-white text-[#17535B]">대기</option>
+                    <option className="bg-white text-[#17535B]">진행중</option>
+                    <option className="bg-white text-[#17535B]">완료</option>
+                    <option className="bg-white text-[#17535B]">미루기</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#17535B]/40 mb-2 block">배정 시간</label>
+                  {(() => {
+                    const linkedTimes = Object.entries(scheduleLinks)
+                      .filter(([, tid]) => tid === task.id)
+                      .map(([t]) => t)
+                      .sort();
+                    if (linkedTimes.length === 0) return <span className="text-xs text-[#17535B]/30">연결된 시간 없음</span>;
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {linkedTimes.map(t => (
+                          <span key={t} className="text-xs font-mono bg-[#E27D60]/10 text-[#E27D60] px-2 py-0.5 rounded">{t}</span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#17535B]/40 mb-2 block">메모</label>
+                  <textarea
+                    className="w-full h-64 p-3 text-sm bg-[#FAF9F6] rounded-xl border-none focus:ring-1 focus:ring-[#17535B] outline-none resize-none"
+                    placeholder="상세 내용, 체크리스트, 참고사항 등을 자유롭게 기록하세요..."
+                    value={task.memo || ''}
+                    onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, memo: e.target.value} : t))}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+      <style dangerouslySetInnerHTML={{ __html: `.custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #17535B20; border-radius: 10px; } @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } } .animate-slide-in { animation: slideIn 0.2s ease-out; }` }} />
     </div>
   );
 };
