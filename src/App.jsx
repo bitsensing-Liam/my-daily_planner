@@ -52,6 +52,10 @@ const App = () => {
   const [selectedSlots, setSelectedSlots] = useState(new Set());
   const [isMergeMode, setIsMergeMode] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [plannerDate, setPlannerDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
   // 전체 타임슬롯 배열 생성
   const allTimes = Array.from({ length: 37 }, (_, i) => {
@@ -128,6 +132,7 @@ const App = () => {
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target.result);
+        if (json.date) setPlannerDate(json.date);
         if (json.tasks) setTasks(json.tasks);
         if (json.schedule) setSchedule(json.schedule);
         if (json.mergedSlots) setMergedSlots(json.mergedSlots);
@@ -171,6 +176,9 @@ const App = () => {
       <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-end border-b-2 border-[#E27D60] pb-4 gap-4">
         <div>
           <h1 className="text-4xl font-bold tracking-tight uppercase">Daily Planner</h1>
+          <p className="text-sm font-bold mt-1 flex items-center gap-1 text-[#17535B]/70">
+            <Calendar size={14} /> {plannerDate}
+          </p>
           <p className="text-[10px] font-mono opacity-50 mt-1 flex items-center gap-1">
             <Database size={12} /> {db ? 'Cloud Sync Enabled' : 'Local File Mode (Check Vercel Env)'}
           </p>
