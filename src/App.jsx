@@ -277,8 +277,8 @@ const App = () => {
                       })()}
                     </td>
                     <td className="py-2">
-                      <select className={`text-[10px] font-bold p-1 rounded border-none w-full text-white ${task.status === '완료' ? 'bg-green-500' : task.status === '진행중' ? 'bg-blue-500' : task.status === '미루기' ? 'bg-red-500' : 'bg-[#FAF9F6] !text-[#17535B]'}`} value={task.status} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, status: e.target.value} : t))}>
-                        <option className="bg-white text-[#17535B]">대기</option><option className="bg-white text-[#17535B]">진행중</option><option className="bg-white text-[#17535B]">완료</option><option className="bg-white text-[#17535B]">미루기</option>
+                      <select className={`text-[10px] font-bold p-1 rounded border-none w-full text-white ${task.status === '완료' ? 'bg-green-500' : task.status === '진행중' ? 'bg-blue-500' : task.status === '미루기' ? 'bg-red-500' : task.status === '기한 연장' ? 'bg-orange-500' : 'bg-[#FAF9F6] !text-[#17535B]'}`} value={task.status} onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, status: e.target.value} : t))}>
+                        <option className="bg-white text-[#17535B]">대기</option><option className="bg-white text-[#17535B]">진행중</option><option className="bg-white text-[#17535B]">완료</option><option className="bg-white text-[#17535B]">미루기</option><option className="bg-white text-[#17535B]">기한 연장</option>
                       </select>
                     </td>
                     <td className="py-2 text-right"><button onClick={() => { setTasks(tasks.filter(t => t.id !== task.id)); setScheduleLinks(Object.fromEntries(Object.entries(scheduleLinks).filter(([, tid]) => tid !== task.id))); }} className="text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button></td>
@@ -390,7 +390,7 @@ const App = () => {
                       </span>
                       {scheduleLinks[time] ? (() => {
                         const linkedTask = tasks.find(t => t.id === scheduleLinks[time]);
-                        const statusColor = linkedTask?.status === '완료' ? 'bg-green-500' : linkedTask?.status === '진행중' ? 'bg-blue-500' : linkedTask?.status === '미루기' ? 'bg-red-500' : 'bg-[#17535B]/20';
+                        const statusColor = linkedTask?.status === '완료' ? 'bg-green-500' : linkedTask?.status === '진행중' ? 'bg-blue-500' : linkedTask?.status === '미루기' ? 'bg-red-500' : linkedTask?.status === '기한 연장' ? 'bg-orange-500' : 'bg-[#17535B]/20';
                         return (
                           <div className="flex-1 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor}`} />
@@ -473,7 +473,7 @@ const App = () => {
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#17535B]/40 mb-2 block">상태</label>
                   <select
-                    className={`text-xs font-bold p-2 rounded-lg border-none w-full text-white ${task.status === '완료' ? 'bg-green-500' : task.status === '진행중' ? 'bg-blue-500' : task.status === '미루기' ? 'bg-red-500' : 'bg-[#17535B]/20 !text-[#17535B]'}`}
+                    className={`text-xs font-bold p-2 rounded-lg border-none w-full text-white ${task.status === '완료' ? 'bg-green-500' : task.status === '진행중' ? 'bg-blue-500' : task.status === '미루기' ? 'bg-red-500' : task.status === '기한 연장' ? 'bg-orange-500' : 'bg-[#17535B]/20 !text-[#17535B]'}`}
                     value={task.status}
                     onChange={(e) => setTasks(tasks.map(t => t.id === task.id ? {...t, status: e.target.value} : t))}
                   >
@@ -481,6 +481,7 @@ const App = () => {
                     <option className="bg-white text-[#17535B]">진행중</option>
                     <option className="bg-white text-[#17535B]">완료</option>
                     <option className="bg-white text-[#17535B]">미루기</option>
+                    <option className="bg-white text-[#17535B]">기한 연장</option>
                   </select>
                 </div>
                 <div>
