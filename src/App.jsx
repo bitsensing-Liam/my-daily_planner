@@ -113,12 +113,12 @@ const App = () => {
 
   // 3. JSON 내보내기 (구글 드라이브 보관용)
   const exportToJson = () => {
-    const dataStr = JSON.stringify({ date: getLocalTodayString(), tasks, schedule, mergedSlots, scheduleLinks, feedback }, null, 2);
+    const dataStr = JSON.stringify({ date: plannerDate, tasks, schedule, mergedSlots, scheduleLinks, feedback }, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `planner_${getLocalTodayString()}.json`;
+    link.download = `planner_${plannerDate}.json`;
     link.click();
     setSaveMsg('JSON 내보내기 완료! 📂');
     setTimeout(() => setSaveMsg(''), 3000);
